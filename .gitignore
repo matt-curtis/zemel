@@ -1,0 +1,9 @@
+.DS_Store
+/.build
+/Packages
+/*.xcodeproj
+xcuserdata/
+
+# Ignores a folder SPM generates.
+# Unsure if this folder might end up being needed in the future.
+.swiftpm/
