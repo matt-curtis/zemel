@@ -47,10 +47,16 @@ public struct Namespace: Equatable, ExpressibleByStringLiteral, CustomDebugStrin
     
     //  MARK: - Methods
     
-    /// Returns a `Name` with this namespace and the given local name.
+    /// Returns a `Name` in this namespace with the given local name.
     
     public subscript(_ localName: StringSource) -> Name {
         .init(ns: self, localName: localName)
+    }
+    
+    /// Returns a `Name` in this namespace with the given local name.
+    
+    public subscript(dynamicMember localName: StaticString) -> Name {
+        self[.staticString(localName)]
     }
     
     public func equals(ns otherNS: String) -> Bool {
