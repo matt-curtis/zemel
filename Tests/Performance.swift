@@ -28,7 +28,7 @@ class PerformanceTests: XCTestCase {
         
         struct TestRoutine: ~Copyable, Routine {
             
-            let ctx = context()
+            @Context var context
             
             var description: String?
             

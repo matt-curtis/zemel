@@ -13,7 +13,7 @@ struct ErrorHandling {
     
     struct NoopSelector: Routine, ~Copyable {
         
-        let ctx = context()
+        @Context var context
         
         func body() -> some RoutineBody { }
         
@@ -70,7 +70,7 @@ struct ErrorHandling {
         
         struct ThrowingRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var didThrow = 0
             
@@ -97,7 +97,7 @@ struct ErrorHandling {
         
         struct ThrowingRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var bodyCallCount = 0
             

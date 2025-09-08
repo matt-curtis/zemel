@@ -33,7 +33,7 @@ struct StopTests {
         func singleRecursiveHandler(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
                 let confirm: Confirmation
                 
@@ -62,7 +62,7 @@ struct StopTests {
         func multipleNestedHandlers(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
                 var aCount = 0, bCount = 0, cCount = 0, dCount = 0
                 
@@ -134,7 +134,7 @@ struct StopTests {
         func nestedHandlers(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
                 var packageCount = 0, metadataCount = 0
                 
@@ -170,7 +170,7 @@ struct StopTests {
         func nestedEndHandler(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
             struct TestRoutine: ~Copyable, Routine {
                 
-                let ctx = context()
+                @Context var context
                 
                 var packageCount = 0, metadataStartCount = 0, metadataEndCount = 0
                 

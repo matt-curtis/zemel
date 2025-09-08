@@ -30,7 +30,7 @@ struct NamespaceHandling {
             
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
                 var elementCount = 0
                 
@@ -99,7 +99,7 @@ struct NamespaceHandling {
             
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
                 var elementCount = 0
                 
@@ -182,7 +182,7 @@ struct NamespaceHandling {
             
             struct TestRoutine: ~Copyable, Routine {
                 
-                let ctx = context()
+                @Context var context
                 
                 @CountBasedExpectation(expecting: "doc", times: 1) var docExpectation
                 

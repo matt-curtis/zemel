@@ -131,11 +131,11 @@ public struct Zemel: ~Copyable {
     public mutating func using<R: Routine & ~Copyable>(_ routinePointer: UnsafeMutablePointer<R>, body: (borrowing ParseMethod) throws -> Void) rethrows {
         //  Grab the untargeted trampoline from the passed routine
         
-        let untargetedTrampoline = routinePointer.pointee.ctx.untargetedTrampoline
+        let untargetedTrampoline = routinePointer.pointee.context.untargetedTrampoline
         
         //  Set the routine's context as the current thread's context
         
-        try routinePointer.pointee.ctx.unsafe.asCurrent {
+        try routinePointer.pointee.context.unsafe.asCurrent {
             try withUnsafeMutablePointer(to: &self) {
                 zemelPointer in
                 

@@ -27,7 +27,7 @@ struct UntargetedRoutineTrampoline {
             
             let routinePointer = routinePointer.assumingMemoryBound(to: routineType)
             
-            try routinePointer.pointee.ctx.configuredForRun(with: event) {
+            try routinePointer.pointee.configuredForRun(with: event) {
                 _ = try routinePointer.pointee.body()
             }
         }

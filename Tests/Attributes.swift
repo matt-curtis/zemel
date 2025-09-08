@@ -15,7 +15,7 @@ struct AttributeIteration {
     func iteration(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             struct Attribute: Equatable, CustomDebugStringConvertible {
                 

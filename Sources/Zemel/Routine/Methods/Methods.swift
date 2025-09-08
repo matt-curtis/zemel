@@ -15,7 +15,7 @@ extension Routine where Self: ~Copyable {
     /// - WARNING: This property is only meant for use within a `select()` method.
     /// Using or storing it outside of a `select` method will fail.
     
-    public var current: SelectorChainRoot { .init(ctx: ctx.unsafe) }
+    public var current: SelectorChainRoot { .init(ctx: context.unsafe) }
     
     
     //  MARK: - Methods
@@ -29,15 +29,15 @@ extension Routine where Self: ~Copyable {
     //  in order for it to be safe, otherwise it'd be possible to pause/resume
     //  selectors in invalid states.
     
-    public var handle: RoutineMethods.Handle { .init(ctx: ctx.unsafe) }
+    public var handle: RoutineMethods.Handle { .init(ctx: context.unsafe) }
     
-    public var select: RoutineMethods.Select { .init(ctx: ctx.unsafe) }
+    public var select: RoutineMethods.Select { .init(ctx: context.unsafe) }
     
-    public var end: RoutineMethods.End { .init(ctx: ctx.unsafe) }
+    public var end: RoutineMethods.End { .init(ctx: context.unsafe) }
     
-    public var withAttributes: RoutineMethods.WithAttributes { .init(ctx: ctx.unsafe) }
+    public var withAttributes: RoutineMethods.WithAttributes { .init(ctx: context.unsafe) }
     
-    public var withText: RoutineMethods.WithText { .init(ctx: ctx.unsafe) }
+    public var withText: RoutineMethods.WithText { .init(ctx: context.unsafe) }
     
     
     //  MARK: Attributes
@@ -70,7 +70,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node isn't an element.
     
     public func attribute(_ name: Name) throws -> String? {
-        try ctx.unsafe.borrowingExpectedElementStartEvent { $0.attributes[name] }
+        try context.unsafe.borrowingExpectedElementStartEvent { $0.attributes[name] }
     }
     
     /// Finds the first attribute matching the given name, if any, and returns `true` if it has the given value.
@@ -104,7 +104,7 @@ extension Routine where Self: ~Copyable {
     /// Returns the name of the current element.
     
     public func name() throws -> Name {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.asName() }
+        try context.unsafe.borrowingExpectedElementStartName { $0.asName() }
     }
     
     /// Returns `true` if the current element's name matches the given name.
@@ -115,7 +115,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not an element.
     
     public func name(is other: Name) throws -> Bool {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.equals(other) }
+        try context.unsafe.borrowingExpectedElementStartName { $0.equals(other) }
     }
     
     /// Returns the local name of the current element.
@@ -131,7 +131,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not an element.
     
     public func localName(is other: String) throws -> Bool {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.has(localName: other) }
+        try context.unsafe.borrowingExpectedElementStartName { $0.has(localName: other) }
     }
     
     
@@ -142,7 +142,21 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not a text node.
     
     public func text() throws -> String {
-        try ctx.unsafe.borrowingExpectedTextEvent { $0.unsafeText.asString() }
+        try context.unsafe.borrowingExpectedTextEvent { $0.unsafeText.asString() }
+    }
+    
+    
+    //  MARK: - State
+    
+    @usableFromInline
+    func configuredForRun(with event: borrowing AnyContextualizedEvent, body: () throws -> Void) rethrows {
+        try context.unsafe.configuredForRun(with: event, body: body)
+    }
+    
+    /// Resets and releases all context state, allowing a routine to be reused for parsing new documents.
+    
+    public func resetContext() {
+        context.unsafe.destroyAndRecreateBacking()
     }
     
 }

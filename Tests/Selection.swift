@@ -18,7 +18,7 @@ struct SelectionTests {
 
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var didMatch = 0
 
@@ -56,7 +56,7 @@ struct SelectionTests {
 
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             var didMatch = 0
 
             mutating func body() -> some RoutineBody {
@@ -94,7 +94,7 @@ struct SelectionTests {
 
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var childMatched = 0
 
@@ -135,7 +135,7 @@ struct SelectionTests {
 
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var matched = 0
 
@@ -173,7 +173,7 @@ struct SelectionTests {
 
         struct ChildRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var matched = 0
 
@@ -187,7 +187,7 @@ struct SelectionTests {
 
         struct DescendantRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             var matched = 0
 
             mutating func body() -> some RoutineBody {
@@ -226,7 +226,7 @@ struct SelectionTests {
 
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var matched = 0
 

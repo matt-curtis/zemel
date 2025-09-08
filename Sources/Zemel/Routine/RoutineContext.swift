@@ -222,7 +222,6 @@ struct UnsafeRoutineContext {
     
     //  MARK: - Routine pre & post-run configuration
     
-    @usableFromInline
     func configuredForRun(with event: borrowing AnyContextualizedEvent, body: () throws -> Void) rethrows {
         try use {
             backing in
@@ -385,31 +384,37 @@ struct UnsafeRoutineContext {
 /// `RoutineContext`s are unique to the routine type they are created for.
 /// Sharing contexts between routines will result in undefined behavior.
 
-public struct RoutineContext: ~Copyable {
+@propertyWrapper
+public struct RoutineContext<ContextualizedRoutine: Routine & ~Copyable>: ~Copyable {
     
-    let unsafe: UnsafeRoutineContext
+    public struct WrappedValue {
+        
+        let unsafe: UnsafeRoutineContext
+        
+        let untargetedTrampoline: UntargetedRoutineTrampoline
+        
+    }
     
-    let untargetedTrampoline: UntargetedRoutineTrampoline
+    public let wrappedValue: WrappedValue
     
     @usableFromInline
     init(untargetedTrampoline: UntargetedRoutineTrampoline, bodyDescription: RoutineBodyDescription) {
-        self.unsafe = UnsafeRoutineContext(bodyDescription: bodyDescription)
-        self.untargetedTrampoline = untargetedTrampoline
+        self.wrappedValue = WrappedValue(
+            unsafe: UnsafeRoutineContext(bodyDescription: bodyDescription),
+            untargetedTrampoline: untargetedTrampoline
+        )
+    }
+    
+    @inlinable
+    public init() {
+        self.init(
+            untargetedTrampoline: UntargetedRoutineTrampoline(for: ContextualizedRoutine.self),
+            bodyDescription: RoutineBodyDescription(for: ContextualizedRoutine.Body.self)
+        )
     }
     
     deinit {
-        unsafe.deinitialize()
-    }
-    
-    @usableFromInline
-    func configuredForRun(with event: borrowing AnyContextualizedEvent, body: () throws -> Void) rethrows {
-        try unsafe.configuredForRun(with: event, body: body)
-    }
-    
-    /// Resets and releases all context state, allowing a routine to be reused for parsing new documents.
-    
-    public func reset() {
-        unsafe.destroyAndRecreateBacking()
+        wrappedValue.unsafe.deinitialize()
     }
     
 }

@@ -199,10 +199,13 @@ public struct RoutineBodies<each Body: RoutineBody>: RoutineBody {
 
 public protocol Routine: ~Copyable {
     
-    /// Tracks this routine's contextual state.
-    /// You should only ever define `ctx` by assigning `context()` to this property.
+    /// An alias for ``RoutineContext``.
     
-    var ctx: RoutineContext { get }
+    typealias Context = RoutineContext<Self>
+    
+    /// Tracks this routine's contextual state.
+    
+    var context: Context.WrappedValue { get }
     
     /// A type describing static metadata about this routine.
     
@@ -211,21 +214,5 @@ public protocol Routine: ~Copyable {
     /// Returns a `RoutineBody` built from event handlers, like `select()`.
     
     @RoutineBodyBuilder mutating func body() throws -> Body
-    
-}
-
-extension Routine where Self: ~Copyable {
-    
-    /// Creates a `RoutineContext`.
-    /// `RoutineContext`s are unique to the routine type they are created for.
-    /// Sharing contexts between routines will result in undefined behavior.
-    
-    @inlinable
-    public static func context() -> RoutineContext {
-        RoutineContext(
-            untargetedTrampoline: UntargetedRoutineTrampoline(for: Self.self),
-            bodyDescription: RoutineBodyDescription(for: Body.self)
-        )
-    }
     
 }

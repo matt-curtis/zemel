@@ -51,7 +51,7 @@ To do so, you'd write a routine that looks like this:
 ```swift
 struct BeyonceRoutine: Routine, ~Copyable {
 
-    let ctx = context()
+    @Context var context
 
     var bio = ""
 
@@ -95,7 +95,7 @@ That's it!
 Throwing an error from anywhere within a routine's `body()` will cancel parsing.
 
 > [!IMPORTANT]
-> If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `ctx.reset()` on it.
+> If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `resetContext()` on it.
 
 ## Selector body execution
 

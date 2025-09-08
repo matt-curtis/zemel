@@ -1,5 +1,5 @@
 //
-//  State.swift
+//  SelectorState.swift
 //  Zemel
 //
 //  Created by Matt Curtis on 3/8/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// A callable function that returns `State` after ensuring state has been safely initialized.
+/// A callable function that returns `SelectorState` after ensuring state has been safely initialized.
 
 public struct UnintializedState<Value>: ~Copyable {
     
@@ -43,14 +43,14 @@ public struct UnintializedState<Value>: ~Copyable {
     }
     
     @usableFromInline
-    func stateReference<T>(over pointer: UnsafeMutablePointer<T>) -> State<T> {
-        State(pointer: pointer, referenceCountToken: referenceCountToken.newToken())
+    func stateReference<T>(over pointer: UnsafeMutablePointer<T>) -> SelectorState<T> {
+        SelectorState(pointer: pointer, referenceCountToken: referenceCountToken.newToken())
     }
     
     /// Returns mutable state. If uninitialized, the value returned by `initialValue()` is used to initialize it first.
     
     @inlinable
-    public func callAsFunction(_ initialValue: @autoclosure () throws -> Value) rethrows -> State<Value> {
+    public func callAsFunction(_ initialValue: @autoclosure () throws -> Value) rethrows -> SelectorState<Value> {
         let pointer = try ctx.checkedPointerToUserState(
             at: nodeIndex,
             initializer: { initializePointer(to: try initialValue()) },
@@ -65,7 +65,7 @@ public struct UnintializedState<Value>: ~Copyable {
     /// - Warning: If you need this, you'll know. If you don't know... you don't need it.
     
     @inlinable
-    public func callAsFunction(unchecked initialValue: @autoclosure () throws -> Value) rethrows -> State<Value> {
+    public func callAsFunction(unchecked initialValue: @autoclosure () throws -> Value) rethrows -> SelectorState<Value> {
         let pointer = try ctx.uncheckedPointerToUserState(
             at: nodeIndex,
             initializer: { initializePointer(to: try initialValue()) }
@@ -77,10 +77,10 @@ public struct UnintializedState<Value>: ~Copyable {
 }
 
 /// Provides a mutable reference to a value managed by Zemel.
-/// `State` references must not escape their scope and be stored or returned; doing so will result in an assertion.
+/// `SelectorState` references must not escape their scope and be stored or returned; doing so will result in an assertion.
 
 @dynamicMemberLookup
-public struct State<Value>: ~Copyable {
+public struct SelectorState<Value>: ~Copyable {
     
     @usableFromInline
     let pointer: UnsafeMutablePointer<Value>

@@ -62,7 +62,7 @@ struct EventOrder {
         
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var events: [ Event ] = []
             

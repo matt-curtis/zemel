@@ -15,7 +15,7 @@ struct TextTests {
     func basicTextGathering(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var a = "", b = "", c = "", d = ""
             
