@@ -53,7 +53,7 @@ struct BeyonceRoutine: Routine, ~Copyable {
 
     @Context var context
 
-    var bio = ""
+    @State var bio = ""
 
     func body() throws -> some Body {
         try select("people") {
