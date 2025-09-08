@@ -97,6 +97,30 @@ Throwing an error from anywhere within a routine's `body()` will cancel parsing.
 > [!IMPORTANT]
 > If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `resetContext()` on it.
 
+## Knowing when an element ends
+
+Element selectors let you handle the start of elements just by writing inside them:
+
+```swift
+select("animal") {
+    print("<animal> started!")
+}
+```
+
+You can use the `end()` method to know when an element ends:
+
+```swift
+select("animal") {
+    print("<animal> started!")
+
+    end {
+        print("<animal> ended!")
+    }
+}
+```
+
+One of the things `end()` is useful for is cancelling parsing early. If you know you have all the information you want once a certain element ends, you can immediately stop parsing, and not waste extra time parsing the rest of the document.
+
 ## Selector body execution
 
 Zemel rewrites element selector bodies. When you write:
