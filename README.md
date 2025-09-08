@@ -92,10 +92,16 @@ That's it!
 
 ## Cancellation
 
-Throwing an error from anywhere within a routine's `body()` will cancel parsing.
+Throwing an error from anywhere within a routine's `body()` will cancel parsing. Swift's built-in `CancellationError` is useful for this:
+
+```swift
+try select("animal") {
+    throw CancellationError()
+}
+```
 
 > [!IMPORTANT]
-> If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `resetContext()` on it.
+> If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `resetContext()` on it that routine.
 
 ## Knowing when an element ends
 
@@ -158,7 +164,7 @@ Zemel can't do this for every kind of statement though. There's two exceptions t
 1. Variable declarations like `let x = ...`, `var y`, or `_ = ...` will always be executed.
 2. Zemel can't rewrite throwing `try ...` statements. Instead, you should call these using `try handle { ... }`
 
-You don't need to worry about any of these things when it comes to the bodies of text selectors, like `select(.text) { ... }`. Their bodies don't need to be rewritten at all, because text nodes can't contain other nodes to select, which means they can never have child selectors.
+You don't need to worry about any of these things when it comes to the bodies of text selectors, like `select(.text) { ... }`. Zemel doesn't rewrite their bodies at all. Since text nodes can't have children, there's nothing to select, so nesting selectors in them doesn't make sense.
 
 ## Storing information about a previously selected element
 
