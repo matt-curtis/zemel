@@ -9,7 +9,7 @@ import Foundation
 
 /// A callable function that returns `SelectorState` after ensuring state has been safely initialized.
 
-public struct UnintializedState<Value>: ~Copyable {
+public struct UnintializedSelectorState<Value>: ~Copyable {
     
     //  MARK: - Properties
     
@@ -76,7 +76,7 @@ public struct UnintializedState<Value>: ~Copyable {
     
 }
 
-/// Provides a mutable reference to a value managed by Zemel.
+/// Provides a mutable reference to a value associated with a selector.
 /// `SelectorState` references must not escape their scope and be stored or returned; doing so will result in an assertion.
 
 @dynamicMemberLookup

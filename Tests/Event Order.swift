@@ -74,7 +74,7 @@ struct EventOrder {
                 record(.text(try text()))
             }
             
-            @RoutineBodyBuilder mutating func recordStartAndEnd(state: borrowing UnintializedState<Name>) throws -> some RoutineBody {
+            @RoutineBodyBuilder mutating func recordStartAndEnd(state: borrowing UnintializedSelectorState<Name>) throws -> some RoutineBody {
                 let elementName = try state(try name())
                 
                 record(.elementStart(elementName.value))

@@ -23,11 +23,11 @@ extension RoutineMethods {
         //  MARK: - Helper methods
         
         @usableFromInline
-        func withUnintializedUserStateForNode<T>(at index: Int, body: (borrowing UnintializedState<T>) throws -> Void) throws {
+        func withUnintializedUserStateForNode<T>(at index: Int, body: (borrowing UnintializedSelectorState<T>) throws -> Void) throws {
             try assertNoReferencesEscape("State references must not escape their immediate context") {
                 newToken in
                 
-                try body(UnintializedState(
+                try body(UnintializedSelectorState(
                     ctx: ctx,
                     nodeIndex: index,
                     referenceCountToken: newToken()
@@ -252,7 +252,7 @@ extension RoutineMethods {
         /// Selects child elements for which the passed condition evaluates to `true`.
         
         @inlinable
-        public func callAsFunction<Content: RoutineBody, UserState>(_ child: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        public func callAsFunction<Content: RoutineBody, UserState>(_ child: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
             try selectChild(
                 byUserCondition: child,
                 deinitializingUserStateUsing: deinitializer(for: UserState.self),
@@ -272,7 +272,7 @@ extension RoutineMethods {
         /// Selects child elements that match the given name.
         
         @inlinable
-        public func callAsFunction<Content: RoutineBody, UserState>(_ child: Name, @RoutineBodyBuilder body: (borrowing UnintializedState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        public func callAsFunction<Content: RoutineBody, UserState>(_ child: Name, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
             try selectChild(
                 by: child,
                 deinitializingUserStateUsing: deinitializer(for: UserState.self),
@@ -295,7 +295,7 @@ extension RoutineMethods {
         /// Selects descendant elements for which the passed condition evaluates to `true`.
         
         @inlinable
-        public func callAsFunction<Content: RoutineBody, UserState>(descendant: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        public func callAsFunction<Content: RoutineBody, UserState>(descendant: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
             try selectDescendant(
                 byUserCondition: descendant,
                 deinitializingUserStateUsing: deinitializer(for: UserState.self),
@@ -315,7 +315,7 @@ extension RoutineMethods {
         /// Selects descendant elements that match the given name.
         
         @inlinable
-        public func callAsFunction<Content: RoutineBody, UserState>(descendant: Name, @RoutineBodyBuilder body: (borrowing UnintializedState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        public func callAsFunction<Content: RoutineBody, UserState>(descendant: Name, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
             try selectDescendant(
                 by: descendant,
                 deinitializingUserStateUsing: deinitializer(for: UserState.self),
@@ -331,7 +331,7 @@ extension RoutineMethods {
         /// Selects elements matching the given selector.
         
         @inlinable
-        public func callAsFunction<Content: RoutineBody, UserState>(_ chain: @autoclosure () throws -> ContainerSelectorChain, @RoutineBodyBuilder body: (borrowing UnintializedState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        public func callAsFunction<Content: RoutineBody, UserState>(_ chain: @autoclosure () throws -> ContainerSelectorChain, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
             try select(
                 using: try chain().result,
                 deinitializingUserStateUsing: deinitializer(for: UserState.self),
