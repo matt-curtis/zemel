@@ -30,13 +30,13 @@ class PerformanceTests: XCTestCase {
             
             @Context var context
             
-            var description: String?
+            @State var description: String?
             
-            var titles: [ String ] = []
+            @State var titles: [ String ] = []
             
-            var authors: [ String ] = []
+            @State var authors: [ String ] = []
             
-            mutating func body() throws -> some RoutineBody {
+            func body() throws -> some RoutineBody {
                 try select("package") {
                     try select(descendant: "metadata") {
                         try select("title") {

@@ -17,7 +17,13 @@ struct TextTests {
             
             @Context var context
             
-            var a = "", b = "", c = "", d = ""
+            @State var a = ""
+            
+            @State var b = ""
+            
+            @State var c = ""
+            
+            @State var d = ""
             
             mutating func body() throws -> some RoutineBody {
                 try select(descendant: true) {

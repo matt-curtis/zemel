@@ -20,9 +20,9 @@ struct SelectionTests {
             
             @Context var context
             
-            var didMatch = 0
+            @State var didMatch = 0
 
-            mutating func body() -> some RoutineBody {
+            func body() -> some RoutineBody {
                 select("foo") {
                     didMatch += 1
                 }
@@ -57,7 +57,8 @@ struct SelectionTests {
         struct TestRoutine: Routine, ~Copyable {
             
             @Context var context
-            var didMatch = 0
+            
+            @State var didMatch = 0
 
             mutating func body() -> some RoutineBody {
                 select(try! localName() == "foo") {
@@ -96,9 +97,9 @@ struct SelectionTests {
             
             @Context var context
             
-            var childMatched = 0
+            @State var childMatched = 0
 
-            mutating func body() -> some RoutineBody {
+            func body() -> some RoutineBody {
                 select("parent") {
                     select("child") {
                         childMatched += 1
@@ -137,9 +138,9 @@ struct SelectionTests {
             
             @Context var context
             
-            var matched = 0
+            @State var matched = 0
 
-            mutating func body() -> some RoutineBody {
+            func body() -> some RoutineBody {
                 select(current.parent.child) {
                     matched += 1
                 }
@@ -175,9 +176,9 @@ struct SelectionTests {
             
             @Context var context
             
-            var matched = 0
+            @State var matched = 0
 
-            mutating func body() -> some RoutineBody {
+            func body() -> some RoutineBody {
                 select(current.parent.child) {
                     matched += 1
                 }
@@ -188,9 +189,10 @@ struct SelectionTests {
         struct DescendantRoutine: Routine, ~Copyable {
             
             @Context var context
-            var matched = 0
+            
+            @State var matched = 0
 
-            mutating func body() -> some RoutineBody {
+            func body() -> some RoutineBody {
                 select("parent") {
                     select(current.descendant(true)) {
                         matched += 1
@@ -228,7 +230,7 @@ struct SelectionTests {
             
             @Context var context
             
-            var matched = 0
+            @State var matched = 0
 
             mutating func body() -> some RoutineBody {
                 select("nonexistent") {

@@ -99,11 +99,11 @@ struct ErrorHandling {
             
             @Context var context
             
-            var bodyCallCount = 0
+            @State var bodyCallCount = 0
             
-            var error: UserError
+            @State var error: UserError
             
-            mutating func throwing(_ expectedError: UserError) throws -> Bool {
+            func throwing(_ expectedError: UserError) throws -> Bool {
                 if expectedError == error {
                     throw error
                 }
@@ -111,7 +111,7 @@ struct ErrorHandling {
                 return false
             }
             
-            mutating func body() throws -> some RoutineBody {
+            func body() throws -> some RoutineBody {
                 let _ = bodyCallCount += 1
                 
                 try select(throwing(.child)) { }

@@ -64,17 +64,17 @@ struct EventOrder {
             
             @Context var context
             
-            var events: [ Event ] = []
+            @State var events: [ Event ] = []
             
-            mutating func record(_ event: Event) {
+            func record(_ event: Event) {
                 events.append(event)
             }
             
-            mutating func recordText() throws {
+            func recordText() throws {
                 record(.text(try text()))
             }
             
-            @RoutineBodyBuilder mutating func recordStartAndEnd(state: borrowing UnintializedSelectorState<Name>) throws -> some RoutineBody {
+            @RoutineBodyBuilder func recordStartAndEnd(state: borrowing UnintializedSelectorState<Name>) throws -> some RoutineBody {
                 let elementName = try state(try name())
                 
                 record(.elementStart(elementName.value))
@@ -84,7 +84,7 @@ struct EventOrder {
                 }
             }
             
-            mutating func body() throws -> some RoutineBody {
+            func body() throws -> some RoutineBody {
                 try select("package") {
                     try recordStartAndEnd(state: $0)
                     

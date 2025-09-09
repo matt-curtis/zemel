@@ -5,8 +5,6 @@
 //  Created by Matt Curtis on 6/25/25.
 //
 
-public enum RoutineMethods { }
-
 extension Routine where Self: ~Copyable {
     
     //  MARK: - Properties
@@ -20,8 +18,6 @@ extension Routine where Self: ~Copyable {
     
     //  MARK: - Methods
     
-    //  MARK: Mutating, body-having methods
-    
     //  NOTE: We used to have a "when-otherwise" (conditional) method,
     //  but there's implications for state managment that would have to be handled —
     //  any state created in the body of a when/otherwise branch would have to be
@@ -29,18 +25,48 @@ extension Routine where Self: ~Copyable {
     //  in order for it to be safe, otherwise it'd be possible to pause/resume
     //  selectors in invalid states.
     
-    public var handle: RoutineMethods.Handle { .init(ctx: context.unsafe) }
+    //  MARK: End
     
-    public var select: RoutineMethods.Select { .init(ctx: context.unsafe) }
+    /// Invokes `body` when a previously selected element ends.
     
-    public var end: RoutineMethods.End { .init(ctx: context.unsafe) }
+    public func end(body: () throws -> Void) rethrows -> VoidRoutineBody {
+        if context.unsafe.execution(\.allowsParentEndSelectors) {
+            try context.unsafe.withExecutionLimited(to: .none) {
+                try body()
+            }
+        }
+        
+        return .init()
+    }
     
-    public var withAttributes: RoutineMethods.WithAttributes { .init(ctx: context.unsafe) }
+    //  MARK: Handle
     
-    public var withText: RoutineMethods.WithText { .init(ctx: context.unsafe) }
+    /// Invokes the given closure when an element is first selected.
+    
+    public func handle(body: () throws -> Void) rethrows -> VoidRoutineBody {
+        if context.unsafe.execution(\.allowsUserHandlers) {
+            try body()
+        }
+        
+        return .init()
+    }
     
     
     //  MARK: Attributes
+    
+    /// Creates an attribute iterator and passes it to the given closure.
+    ///
+    /// - Throws: An error if the current node isn't an element.
+    
+    public func withAttributes(body: (borrowing AttributeIterator) throws -> Void) throws {
+        try context.unsafe.borrowingExpectedElementStartEvent {
+            guard var rawIterator = AttributeIterator.Raw(over: $0.attributes) else { return }
+            
+            try withUnsafeMutablePointer(to: &rawIterator) {
+                try body(AttributeIterator(pointer: $0))
+            }
+        }
+    }
     
     /// Returns `true` if any attribute exists matching the given name.
     /// - Note: Element attributes defined in XML without an explicit namespace don't belong to any namespace.
@@ -143,6 +169,18 @@ extension Routine where Self: ~Copyable {
     
     public func text() throws -> String {
         try context.unsafe.borrowingExpectedTextEvent { $0.unsafeText.asString() }
+    }
+    
+    /// Calls the given closure with a buffer containing the UTF-8 text content of the current text node.
+    ///
+    /// - Throws: An error if the current node is not a text node.
+    /// - Warning: The buffer passed as an argument to `body` is valid only during the execution of this method.
+    /// Do not store, mutate, or return the pointer for later use.
+    
+    public func withText(body: (borrowing UnsafeBufferPointer<UInt8>) throws -> Void) throws {
+        try context.unsafe.borrowingExpectedTextEvent {
+            try body($0.unsafeText.asBuffer())
+        }
     }
     
     
