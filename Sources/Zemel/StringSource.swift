@@ -10,9 +10,20 @@
 
 public enum StringSource: ExpressibleByStringLiteral {
     
+    /// A string source backed by a `String`.
+    
     case string(String)
+    
+    /// A string source backed by a `StaticString`.
+    
     case staticString(StaticString)
+    
+    /// A string source backed by a pointer to a UTF-8 encoded text buffer of the specified length.
+    
     case pointer(UnsafePointer<UInt8>, length: Int)
+    
+    /// A string source backed by a pointer to a UTF-8 encoded text buffer terminated by a null character.
+    
     case nullTerminatedPointer(UnsafePointer<UInt8>)
     
     

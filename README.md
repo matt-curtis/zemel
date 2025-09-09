@@ -55,16 +55,16 @@ struct BeyonceRoutine: Routine, ~Copyable {
 
     @State var bio = ""
 
-    func body() throws -> some Body {
+    func body() throws -> some RoutineBody {
         try select("people") {
-            try select(presidentNamedBeyonce) {
-                select(.text) { bio = try text() }
+            try select(presidentNamedBeyonce()) {
+                try select(.text) { bio = try text() }
             }
         }
     }
 
-    func presidentNamedBeyonce() -> Bool {
-        name(is: "person") &&
+    func presidentNamedBeyonce() throws -> Bool {
+        try name(is: "person") &&
         attribute("role", is: "president") &&
         attribute("name", is: "Beyonce")
     }
@@ -75,8 +75,9 @@ struct BeyonceRoutine: Routine, ~Copyable {
 and use said routine for parsing like this:
 
 ```swift
-var zemel = Zemel()
 var routine = BeyonceRoutine()
+
+var zemel = Zemel()
 let xml = "<people><person>..."
 
 try zemel.using(&routine) {
@@ -90,22 +91,22 @@ That's it!
 
 # Advanced usage
 
-## Cancellation
+## Cancellation & reusing routines
 
-Throwing an error from anywhere within a routine's `body()` will cancel parsing. Swift's built-in `CancellationError` is useful for this:
+Throwing an error from anywhere within a routine's `body()` will cancel parsing:
 
 ```swift
-try select("animal") {
+func body() throws -> some RoutineBody {
     throw CancellationError()
 }
 ```
 
 > [!IMPORTANT]
-> If you want to reuse a routine for parsing _after_ you've thrown an error from its body, you'll need to call `resetContext()` on it that routine.
+> A routine's state is tied to the document it's being used to parse. If you want to reuse a routine to parse a _new_ document or after you've thrown an error from it, you'll need to reset it first by calling `resetContext()` on it. Reusing a routine for parsing without resetting it will result in undefined behavior.
 
 ## Knowing when an element ends
 
-Element selectors let you handle the start of elements just by writing inside them:
+Element selectors let you handle the start of elements just by writing code inside them:
 
 ```swift
 select("animal") {
@@ -113,7 +114,7 @@ select("animal") {
 }
 ```
 
-You can use the `end()` method to know when an element ends:
+To know when an element ends, use the `end()` method:
 
 ```swift
 select("animal") {
@@ -125,7 +126,7 @@ select("animal") {
 }
 ```
 
-One of the things `end()` is useful for is cancelling parsing early. If you know you have all the information you want once a certain element ends, you can immediately stop parsing, and not waste extra time parsing the rest of the document.
+One of the things `end()` is useful for is cancelling parsing early. If you know you have all the information you need once a certain element ends, you can immediately stop parsing, and not waste extra time parsing the rest of the document.
 
 ## Selector body execution
 
@@ -145,24 +146,25 @@ Zemel rewrites that to:
 
 ```swift
 select("persons") {
-    if /* this is the first time selecting persons */ {
+    if /* this is the start of <persons> */ {
         print("parent selector!")
     }
 
     select("person") {
-        if /* this is the first time selecting person */ {
+        if /* this is the start of <person> */ {
             print("child selector!")
         }
     }
 }
 ```
 
-That way, even though Zemel executes all this code _every_ time a new piece of XML is parsed, it ensures it only calls code that is meant to be called once, once.
+That way, even though Zemel executes all this code _every_ time a new piece of XML is parsed, it can ensure code that is meant to be executed when an element starts is only executed then.
 
-Zemel can't do this for every kind of statement though. There's two exceptions to keep in mind:
+Zemel can't do this for every kind of statement though. There's a few exceptions to keep in mind:
 
 1. Variable declarations like `let x = ...`, `var y`, or `_ = ...` will always be executed.
 2. Zemel can't rewrite throwing `try ...` statements. Instead, you should call these using `try handle { ... }`
+3. If, for loops, and so on. More complex code should be moved either into their own methods, or executed via `handle()`.
 
 You don't need to worry about any of these things when it comes to the bodies of text selectors, like `select(.text) { ... }`. Zemel doesn't rewrite their bodies at all. Since text nodes can't have children, there's nothing to select, so nesting selectors in them doesn't make sense.
 
@@ -208,11 +210,11 @@ enum StringSource: ExpressibleByStringLiteral {
 
 `StringSource` values can be created from string literals, so when you write `select("person")` `"person"` automatically gets turned into a `StringSource`.
 
-Most of the time you don't need to think about this, but it's worth keeping in mind in case you need to explicitly pass `String` to an API that accepts `StringSource` values, or have a UTF-8 character buffer hanging around that you want to pass directly.
+Most of the time you don't need to think about this, but it's worth keeping in mind in case you need to explicitly pass `String` to an API that accepts `StringSource` values, or have a UTF-8 character buffer hanging around that you want to pass to Zemel directly.
 
 ## Working with names
 
-XML involves thinking about names a bit, so let's talk about them.
+XML involves thinking about names a bit. Let's talk about it.
 
 In XML, elements and attributes — the two things you'll care about most often — have names. Names have two components: a namespace, and a local name (local name means "local to its namespace.")
 
@@ -252,7 +254,7 @@ let musicName = Name(ns: "http://music.com", localName: "bass")
 Names created from string literals have _no_ namespace:
 
 ```swift
-let name: Name = "joe" // Name(ns: nil, localName: "joe")
+let name: Name = "joe" // == Name(ns: nil, localName: "joe")
 ```
 
 > [!IMPORTANT]
@@ -334,7 +336,7 @@ current.text()
 
 ## Selector conditions
 
-Sometimes you'll want to select elements based on a more complex series of conditions than just its name. It's pretty common, for example, to want to select an element based on its name and some attribute it has. The conditional variations of selectors are meant for just this:
+Sometimes you'll want to select elements based on a more complex series of criteria than just its name. It's pretty common, for example, to want to select an element based on its name and some attribute it has. The conditional variations of selector methods are meant for just this:
 
 ```swift
 func myCondition() throws -> Bool {
@@ -352,7 +354,7 @@ You can technically write any condition you want, even based on information not 
 
 You can select descendant text using either `select(.text)` or `select(current...text())`, and calling `text()` to get the selected text node as a `String`.
 
-Keep in mind the text selector fires for each text node in an element, so if for the following XML:
+Keep in mind the text selector fires for each text node it encounters, so if for the following XML:
 
 ```xml
 <persons>
@@ -408,7 +410,7 @@ func localName() throws -> String
 func localName(is: StringSource) throws -> Bool
 ```
 
-and the second around its attributes.
+and the second around its attributes:
 
 ```swift
 func attribute(exists: Name) throws -> Bool
