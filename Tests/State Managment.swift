@@ -13,7 +13,7 @@ struct StateManagement {
     
     struct TestRoutine: Routine, ~Copyable {
         
-        let ctx = context()
+        @Context var context
         
         enum SelectorKind: CaseIterable {
             
@@ -119,7 +119,7 @@ struct StateManagement {
             
             try parse(xml: "<xml></xml>", chunking: chunkingStrategy, using: &routine)
             
-            routine.ctx.reset()
+            routine.resetContext()
         }
         
         routine.selectorKindConfirmingCollection.reset()

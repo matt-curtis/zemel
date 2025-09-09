@@ -5,8 +5,6 @@
 //  Created by Matt Curtis on 6/25/25.
 //
 
-public enum RoutineMethods { }
-
 extension Routine where Self: ~Copyable {
     
     //  MARK: - Properties
@@ -15,12 +13,10 @@ extension Routine where Self: ~Copyable {
     /// - WARNING: This property is only meant for use within a `select()` method.
     /// Using or storing it outside of a `select` method will fail.
     
-    public var current: SelectorChainRoot { .init(ctx: ctx.unsafe) }
+    public var current: SelectorChainRoot { .init(ctx: context.unsafe) }
     
     
     //  MARK: - Methods
-    
-    //  MARK: Mutating, body-having methods
     
     //  NOTE: We used to have a "when-otherwise" (conditional) method,
     //  but there's implications for state managment that would have to be handled —
@@ -29,18 +25,48 @@ extension Routine where Self: ~Copyable {
     //  in order for it to be safe, otherwise it'd be possible to pause/resume
     //  selectors in invalid states.
     
-    public var handle: RoutineMethods.Handle { .init(ctx: ctx.unsafe) }
+    //  MARK: End
     
-    public var select: RoutineMethods.Select { .init(ctx: ctx.unsafe) }
+    /// Invokes `body` when a previously selected element ends.
     
-    public var end: RoutineMethods.End { .init(ctx: ctx.unsafe) }
+    public func end(body: () throws -> Void) rethrows -> VoidRoutineBody {
+        if context.unsafe.execution(\.allowsParentEndSelectors) {
+            try context.unsafe.withExecutionLimited(to: .none) {
+                try body()
+            }
+        }
+        
+        return .init()
+    }
     
-    public var withAttributes: RoutineMethods.WithAttributes { .init(ctx: ctx.unsafe) }
+    //  MARK: Handle
     
-    public var withText: RoutineMethods.WithText { .init(ctx: ctx.unsafe) }
+    /// Invokes the given closure when an element is first selected.
+    
+    public func handle(body: () throws -> Void) rethrows -> VoidRoutineBody {
+        if context.unsafe.execution(\.allowsUserHandlers) {
+            try body()
+        }
+        
+        return .init()
+    }
     
     
     //  MARK: Attributes
+    
+    /// Creates an attribute iterator and passes it to the given closure.
+    ///
+    /// - Throws: An error if the current node isn't an element.
+    
+    public func withAttributes(body: (borrowing AttributeIterator) throws -> Void) throws {
+        try context.unsafe.borrowingExpectedElementStartEvent {
+            guard var rawIterator = AttributeIterator.Raw(over: $0.attributes) else { return }
+            
+            try withUnsafeMutablePointer(to: &rawIterator) {
+                try body(AttributeIterator(pointer: $0))
+            }
+        }
+    }
     
     /// Returns `true` if any attribute exists matching the given name.
     /// - Note: Element attributes defined in XML without an explicit namespace don't belong to any namespace.
@@ -70,7 +96,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node isn't an element.
     
     public func attribute(_ name: Name) throws -> String? {
-        try ctx.unsafe.borrowingExpectedElementStartEvent { $0.attributes[name] }
+        try context.unsafe.borrowingExpectedElementStartEvent { $0.attributes[name] }
     }
     
     /// Finds the first attribute matching the given name, if any, and returns `true` if it has the given value.
@@ -104,7 +130,7 @@ extension Routine where Self: ~Copyable {
     /// Returns the name of the current element.
     
     public func name() throws -> Name {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.asName() }
+        try context.unsafe.borrowingExpectedElementStartName { $0.asName() }
     }
     
     /// Returns `true` if the current element's name matches the given name.
@@ -115,7 +141,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not an element.
     
     public func name(is other: Name) throws -> Bool {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.equals(other) }
+        try context.unsafe.borrowingExpectedElementStartName { $0.equals(other) }
     }
     
     /// Returns the local name of the current element.
@@ -131,7 +157,7 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not an element.
     
     public func localName(is other: String) throws -> Bool {
-        try ctx.unsafe.borrowingExpectedElementStartName { $0.has(localName: other) }
+        try context.unsafe.borrowingExpectedElementStartName { $0.has(localName: other) }
     }
     
     
@@ -142,7 +168,33 @@ extension Routine where Self: ~Copyable {
     /// - Throws: An error if the current node is not a text node.
     
     public func text() throws -> String {
-        try ctx.unsafe.borrowingExpectedTextEvent { $0.unsafeText.asString() }
+        try context.unsafe.borrowingExpectedTextEvent { $0.unsafeText.asString() }
+    }
+    
+    /// Calls the given closure with a buffer containing the UTF-8 text content of the current text node.
+    ///
+    /// - Throws: An error if the current node is not a text node.
+    /// - Warning: The buffer passed as an argument to `body` is valid only during the execution of this method.
+    /// Do not store, mutate, or return the pointer for later use.
+    
+    public func withText(body: (borrowing UnsafeBufferPointer<UInt8>) throws -> Void) throws {
+        try context.unsafe.borrowingExpectedTextEvent {
+            try body($0.unsafeText.asBuffer())
+        }
+    }
+    
+    
+    //  MARK: - State
+    
+    @usableFromInline
+    func configuredForRun(with event: borrowing AnyContextualizedEvent, body: () throws -> Void) rethrows {
+        try context.unsafe.configuredForRun(with: event, body: body)
+    }
+    
+    /// Resets and releases all context state, allowing a routine to be reused for parsing new documents.
+    
+    public func resetContext() {
+        context.unsafe.destroyAndRecreateBacking()
     }
     
 }

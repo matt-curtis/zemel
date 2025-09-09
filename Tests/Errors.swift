@@ -13,7 +13,7 @@ struct ErrorHandling {
     
     struct NoopSelector: Routine, ~Copyable {
         
-        let ctx = context()
+        @Context var context
         
         func body() -> some RoutineBody { }
         
@@ -70,7 +70,7 @@ struct ErrorHandling {
         
         struct ThrowingRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             var didThrow = 0
             
@@ -97,13 +97,13 @@ struct ErrorHandling {
         
         struct ThrowingRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
-            var bodyCallCount = 0
+            @State var bodyCallCount = 0
             
-            var error: UserError
+            @State var error: UserError
             
-            mutating func throwing(_ expectedError: UserError) throws -> Bool {
+            func throwing(_ expectedError: UserError) throws -> Bool {
                 if expectedError == error {
                     throw error
                 }
@@ -111,7 +111,7 @@ struct ErrorHandling {
                 return false
             }
             
-            mutating func body() throws -> some RoutineBody {
+            func body() throws -> some RoutineBody {
                 let _ = bodyCallCount += 1
                 
                 try select(throwing(.child)) { }

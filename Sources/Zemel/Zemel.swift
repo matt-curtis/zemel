@@ -125,15 +125,17 @@ public struct Zemel: ~Copyable {
     //  MARK: - Methods
     
     /// Calls the given closure with a method that parses XML chunks using a specific `Routine`.
+    /// Whenever a routine in use throws an error, this method stops parsing and immediately returns.
+    /// To reuse a routine again after it has thrown an error, you'll need to reset it first by calling `reset()` on its context.
     
     public mutating func using<R: Routine & ~Copyable>(_ routinePointer: UnsafeMutablePointer<R>, body: (borrowing ParseMethod) throws -> Void) rethrows {
         //  Grab the untargeted trampoline from the passed routine
         
-        let untargetedTrampoline = routinePointer.pointee.ctx.untargetedTrampoline
+        let untargetedTrampoline = routinePointer.pointee.context.untargetedTrampoline
         
         //  Set the routine's context as the current thread's context
         
-        try routinePointer.pointee.ctx.unsafe.asCurrent {
+        try routinePointer.pointee.context.unsafe.asCurrent {
             try withUnsafeMutablePointer(to: &self) {
                 zemelPointer in
                 

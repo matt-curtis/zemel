@@ -15,9 +15,15 @@ struct TextTests {
     func basicTextGathering(whenChunking chunkingStrategy: ChunkingStrategy) async throws {
         struct TestRoutine: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
-            var a = "", b = "", c = "", d = ""
+            @State var a = ""
+            
+            @State var b = ""
+            
+            @State var c = ""
+            
+            @State var d = ""
             
             mutating func body() throws -> some RoutineBody {
                 try select(descendant: true) {

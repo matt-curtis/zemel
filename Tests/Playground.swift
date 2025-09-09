@@ -15,7 +15,7 @@ struct Playground {
     //    func profileBarebones() async throws {
     //        struct TestSelector: Routine, ~Copyable {
     //
-    //            let ctx = context()
+    //            @Context var context
     //
     //            func body() -> some RoutineBody {
     //
@@ -41,7 +41,7 @@ struct Playground {
     func profileBasicSelection() throws {
         struct TestSelector: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             func body() -> some RoutineBody {
                 select("root") {
@@ -97,7 +97,7 @@ struct Playground {
 //        
 //        struct TestRoutine: ~Copyable, Routine {
 //            
-//            let ctx = context()
+//            @Context var context
 //            
 //            var description: String?
 //            
@@ -143,7 +143,7 @@ struct Playground {
 //    func play() async throws {
 //        struct TestRoutine: Routine, ~Copyable {
 //            
-//            let ctx = context()
+//            @Context var context
 //            
 //            func body() -> some RoutineBody {
 //                let _ = print("\nroutine start")
@@ -179,7 +179,7 @@ struct Playground {
     func play2() async throws {
         struct TestSelector: Routine, ~Copyable {
             
-            let ctx = context()
+            @Context var context
             
             class Hmm {
                 
@@ -228,7 +228,7 @@ struct Playground {
 //    func test() throws {
 //        struct TestSelector: Routine, ~Copyable {
 //            
-//            let ctx = context()
+//            @Context var context
 //            
 //            var text = ""
 //            

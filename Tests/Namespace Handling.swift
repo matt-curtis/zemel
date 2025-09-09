@@ -30,13 +30,13 @@ struct NamespaceHandling {
             
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
-                var elementCount = 0
+                @State var elementCount = 0
                 
                 let ns = Constants.ns
                 
-                mutating func body() throws -> some RoutineBody {
+                func body() throws -> some RoutineBody {
                     try select(descendant: true) {
                         var attributeCount = 0
                         
@@ -99,11 +99,11 @@ struct NamespaceHandling {
             
             struct TestRoutine: Routine, ~Copyable {
                 
-                let ctx = context()
+                @Context var context
                 
-                var elementCount = 0
+                @State var elementCount = 0
                 
-                mutating func body() throws -> some RoutineBody {
+                func body() throws -> some RoutineBody {
                     let ns2 = Constants.ns2
                     
                     try select(descendant: true) {
@@ -182,7 +182,7 @@ struct NamespaceHandling {
             
             struct TestRoutine: ~Copyable, Routine {
                 
-                let ctx = context()
+                @Context var context
                 
                 @CountBasedExpectation(expecting: "doc", times: 1) var docExpectation
                 

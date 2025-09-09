@@ -1,0 +1,356 @@
+//
+//  Routine + Select.swift
+//  Zemel
+//
+//  Created by Matt Curtis on 6/25/25.
+//
+
+fileprivate extension UnsafeRoutineContext {
+    
+    //  Swift refused to fully specialize calls to this function
+    //  when it existing as a method on Routine, for reasons I can't fathom.
+    //  Moving it onto UnsafeRoutineContext works, though.
+    //
+    //  (See @_assemblyVision + build for profiling)
+    
+    func select<S: Selector>(
+        using selector: @autoclosure () -> S,
+        process: (inout S, borrowing AnyContextualizedEvent) throws -> SelectionEvent,
+        body: (Int) throws -> Void,
+        userStateDeinitializer: Routine.Deinitializer
+    ) rethrows {
+        //  Are selectors allowed to execute in the current context?
+        
+        guard execution(\.allowsSelectors) else {
+            skipPastChildrenOfCurrentNode()
+            
+            return
+        }
+        
+        //  Select
+        
+        let selectionEvent = try with(currentSelector: selector()) {
+            selector in
+            
+            try borrowingEvent {
+                event in try process(&selector, event)
+            }
+        }
+        
+        //  If we're not supposed to execute the body, skip:
+        
+        guard let allowedExecution = selectionEvent.appropriateBodyExecution else {
+            skipPastChildrenOfCurrentNode()
+            
+            return
+        }
+        
+        //  Push or pop slots for whatever state the user may use,
+        //  depending on the selection event
+        
+        let nodeIndex = nodeIndex
+        
+        if case .matchedContainer(.atStart) = selectionEvent {
+            pushEmptyUserStateSlot(to: nodeIndex)
+        }
+        
+        defer {
+            if case .matchedContainer(.atEnd) = selectionEvent {
+                popUserStateSlot(from: nodeIndex, using: userStateDeinitializer)
+            }
+        }
+        
+        //  Execute selector body
+        
+        try withExecutionLimited(to: allowedExecution) {
+            incrementNodeIndex()
+            
+            try body(nodeIndex)
+        }
+    }
+    
+}
+
+extension Routine where Self: ~Copyable {
+        
+    //  MARK: - Typealiases
+    
+    @usableFromInline
+    typealias Deinitializer = (UnsafeMutableRawPointer) -> Void
+    
+    
+    //  MARK: - Helper methods
+    
+    @usableFromInline
+    func withUnintializedUserStateForNode<T>(at index: Int, body: (borrowing UnintializedSelectorState<T>) throws -> Void) throws {
+        try assertNoReferencesEscape("State references must not escape their immediate context") {
+            newToken in
+            
+            try body(UnintializedSelectorState(
+                ctx: context.unsafe,
+                nodeIndex: index,
+                referenceCountToken: newToken()
+            ))
+        }
+    }
+    
+    @inlinable
+    func deinitializer<T>(for: T.Type = T.self) -> Deinitializer {
+        { $0.assumingMemoryBound(to: T.self).deinitialize(count: 1) }
+    }
+    
+    @inlinable
+    static func noopDeinitializer(_: UnsafeMutableRawPointer) -> Void {
+        preconditionFailure("Forgot to supply deinitializer for user state!")
+    }
+    
+    //  MARK: - Base select methods
+    
+    //  MARK: Children
+    
+    @usableFromInline
+    func selectChild<T, U>(byUserCondition userCondition: () throws -> Bool, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<T, U> {
+        try context.unsafe.select(
+            using: ChildContainerSelector(),
+            process: {
+                selector, event in
+                
+                try selector.process(
+                    event: event,
+                    usingStartCondition: {
+                        try Conditions.condition(userCondition, isTrueForElementStart: $0)
+                    }
+                )
+            },
+            body: body,
+            userStateDeinitializer: userStateDeinitializer
+        )
+        
+        return .init()
+    }
+    
+    @usableFromInline
+    func selectChild<T, U>(by name: Name, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<T, U> {
+        try context.unsafe.select(
+            using: ChildContainerSelector(),
+            process: {
+                selector, event in
+                
+                selector.process(
+                    event: event,
+                    usingStartCondition: {
+                        event in
+                        
+                        name.withUnsafeName {
+                            Conditions.event(event, startsElementMatchingUserGivenName: $0)
+                        }
+                    }
+                )
+            },
+            body: body,
+            userStateDeinitializer: userStateDeinitializer
+        )
+        
+        return .init()
+    }
+    
+    //  MARK: - Descendants
+    
+    @usableFromInline
+    func selectDescendant<Content: RoutineBody, UserState>(byUserCondition userCondition: () throws -> Bool, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
+        try context.unsafe.select(
+            using: DescendantContainerSelector(),
+            process: {
+                selector, event in
+                
+                try selector.process(
+                    event: event,
+                    usingStartCondition: {
+                        try Conditions.condition(userCondition, isTrueForElementStart: $0)
+                    }
+                )
+            },
+            body: body,
+            userStateDeinitializer: userStateDeinitializer
+        )
+        
+        return .init()
+    }
+    
+    @usableFromInline
+    func selectDescendant<Content: RoutineBody, UserState>(by name: Name, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
+        try context.unsafe.select(
+            using: DescendantContainerSelector(),
+            process: {
+                selector, event in
+                
+                selector.process(
+                    event: event,
+                    usingStartCondition: {
+                        event in
+                        
+                        name.withUnsafeName {
+                            Conditions.event(event, startsElementMatchingUserGivenName: $0)
+                        }
+                    }
+                )
+            },
+            body: body,
+            userStateDeinitializer: userStateDeinitializer
+        )
+        
+        return .init()
+    }
+    
+    //  MARK: Chains
+    
+    @usableFromInline
+    func select<Content: RoutineBody, UserState>(using chainResult: @autoclosure () throws -> SelectorChainResult, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
+        try context.unsafe.select(
+            using: ChainExecutingSelector(),
+            process: {
+                selector, event in
+                
+                try selector.select(using: chainResult, in: context.unsafe)
+            },
+            body: body,
+            userStateDeinitializer: userStateDeinitializer
+        )
+        
+        return .init()
+    }
+    
+    
+    //  MARK: - Text selection
+    
+    /// Selects descendant text nodes.
+    
+    public func select(_ text: TextSelectorKind, body: () throws -> Void) rethrows -> VoidRoutineBody {
+        if context.unsafe.execution(\.allowsSelectors) {
+            let isText = context.unsafe.borrowingEvent { $0.isText }
+            
+            if isText {
+                try context.unsafe.withExecutionLimited(to: .userHandlers, run: body)
+            }
+        }
+        
+        return .init()
+    }
+    
+    
+    //  MARK: - Child selection
+    
+    //  MARK: Condition
+    
+    /// Selects child elements for which the passed condition evaluates to `true`.
+    
+    @inlinable
+    public func select<Content: RoutineBody>(_ child: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: () throws -> Content) rethrows -> RoutineBodyNode<Content, Never> {
+        try selectChild(byUserCondition: child) { _ in _ = try body() }
+    }
+    
+    /// Selects child elements for which the passed condition evaluates to `true`.
+    
+    @inlinable
+    public func select<Content: RoutineBody, UserState>(_ child: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        try selectChild(
+            byUserCondition: child,
+            deinitializingUserStateUsing: deinitializer(for: UserState.self),
+            body: { try withUnintializedUserStateForNode(at: $0) { _ = try body($0) } }
+        )
+    }
+    
+    //  MARK: Name
+    
+    /// Selects child elements that match the given name.
+    
+    @inlinable
+    public func select<Content: RoutineBody>(_ child: Name, @RoutineBodyBuilder body: () throws -> Content) rethrows -> RoutineBodyNode<Content, Never> {
+        try selectChild(by: child) { _ in _ = try body() }
+    }
+    
+    /// Selects child elements that match the given name.
+    
+    @inlinable
+    public func select<Content: RoutineBody, UserState>(_ child: Name, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        try selectChild(
+            by: child,
+            deinitializingUserStateUsing: deinitializer(for: UserState.self),
+            body: { try withUnintializedUserStateForNode(at: $0) { _ = try body($0) } }
+        )
+    }
+    
+    
+    //  MARK: - Descendant selection
+    
+    //  MARK: Condition
+    
+    /// Selects descendant elements for which the passed condition evaluates to `true`.
+    
+    @inlinable
+    public func select<Content: RoutineBody>(descendant: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: () throws -> Content) rethrows -> RoutineBodyNode<Content, Never> {
+        try selectDescendant(byUserCondition: descendant) { _ in _ = try body() }
+    }
+    
+    /// Selects descendant elements for which the passed condition evaluates to `true`.
+    
+    @inlinable
+    public func select<Content: RoutineBody, UserState>(descendant: @autoclosure () throws -> Bool, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        try selectDescendant(
+            byUserCondition: descendant,
+            deinitializingUserStateUsing: deinitializer(for: UserState.self),
+            body: { try withUnintializedUserStateForNode(at: $0) { _ = try body($0) } }
+        )
+    }
+    
+    //  MARK: Name
+    
+    /// Selects descendant elements that match the given name.
+    
+    @inlinable
+    public func select<Content: RoutineBody>(descendant: Name, @RoutineBodyBuilder body: () throws -> Content) rethrows -> RoutineBodyNode<Content, Never> {
+        try selectDescendant(by: descendant) { _ in _ = try body() }
+    }
+    
+    /// Selects descendant elements that match the given name.
+    
+    @inlinable
+    public func select<Content: RoutineBody, UserState>(descendant: Name, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        try selectDescendant(
+            by: descendant,
+            deinitializingUserStateUsing: deinitializer(for: UserState.self),
+            body: { try withUnintializedUserStateForNode(at: $0) { _ = try body($0) } }
+        )
+    }
+    
+    
+    //  MARK: - Selector chains
+    
+    //  MARK: Container selectors
+    
+    /// Selects elements matching the given selector.
+    
+    @inlinable
+    public func select<Content: RoutineBody, UserState>(_ chain: @autoclosure () throws -> ContainerSelectorChain, @RoutineBodyBuilder body: (borrowing UnintializedSelectorState<UserState>) throws -> Content) rethrows -> RoutineBodyNode<Content, UserState> {
+        try select(
+            using: try chain().result,
+            deinitializingUserStateUsing: deinitializer(for: UserState.self),
+            body: { try withUnintializedUserStateForNode(at: $0) { _ = try body($0) } }
+        )
+    }
+    
+    /// Selects elements matching the given selector.
+    
+    public func select<Content: RoutineBody>(_ chain: @autoclosure () throws -> ContainerSelectorChain, @RoutineBodyBuilder body: () throws -> Content) rethrows -> RoutineBodyNode<Content, Never> {
+        try select(using: try chain().result) { _ in _ = try body() }
+    }
+    
+    //  MARK: Node selectors
+    
+    /// Selects nodes matching the given selector.
+    
+    public func select(_ chain: @autoclosure () -> NodeSelectorChain, body: () throws -> Void) rethrows -> RoutineBodyNode<VoidRoutineBody, Never> {
+        try select(using: chain().result) { _ in _ = try body() }
+    }
+    
+}
