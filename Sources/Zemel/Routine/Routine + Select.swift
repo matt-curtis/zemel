@@ -5,6 +5,72 @@
 //  Created by Matt Curtis on 6/25/25.
 //
 
+fileprivate extension UnsafeRoutineContext {
+    
+    //  Swift refused to fully specialize calls to this function
+    //  when it existing as a method on Routine, for reasons I can't fathom.
+    //  Moving it onto UnsafeRoutineContext works, though.
+    //
+    //  (See @_assemblyVision + build for profiling)
+    
+    func select<S: Selector>(
+        using selector: @autoclosure () -> S,
+        process: (inout S, borrowing AnyContextualizedEvent) throws -> SelectionEvent,
+        body: (Int) throws -> Void,
+        userStateDeinitializer: Routine.Deinitializer
+    ) rethrows {
+        //  Are selectors allowed to execute in the current context?
+        
+        guard execution(\.allowsSelectors) else {
+            skipPastChildrenOfCurrentNode()
+            
+            return
+        }
+        
+        //  Select
+        
+        let selectionEvent = try with(currentSelector: selector()) {
+            selector in
+            
+            try borrowingEvent {
+                event in try process(&selector, event)
+            }
+        }
+        
+        //  If we're not supposed to execute the body, skip:
+        
+        guard let allowedExecution = selectionEvent.appropriateBodyExecution else {
+            skipPastChildrenOfCurrentNode()
+            
+            return
+        }
+        
+        //  Push or pop slots for whatever state the user may use,
+        //  depending on the selection event
+        
+        let nodeIndex = nodeIndex
+        
+        if case .matchedContainer(.atStart) = selectionEvent {
+            pushEmptyUserStateSlot(to: nodeIndex)
+        }
+        
+        defer {
+            if case .matchedContainer(.atEnd) = selectionEvent {
+                popUserStateSlot(from: nodeIndex, using: userStateDeinitializer)
+            }
+        }
+        
+        //  Execute selector body
+        
+        try withExecutionLimited(to: allowedExecution) {
+            incrementNodeIndex()
+            
+            try body(nodeIndex)
+        }
+    }
+    
+}
+
 extension Routine where Self: ~Copyable {
         
     //  MARK: - Typealiases
@@ -40,69 +106,11 @@ extension Routine where Self: ~Copyable {
     
     //  MARK: - Base select methods
     
-    //  MARK: - Base
-    
-    func select<S: Selector>(
-        using selector: @autoclosure () -> S,
-        process: (inout S, borrowing AnyContextualizedEvent) throws -> SelectionEvent,
-        body: (Int) throws -> Void,
-        userStateDeinitializer: Deinitializer
-    ) rethrows {
-        //  Are selectors allowed to execute in the current context?
-        
-        guard context.unsafe.execution(\.allowsSelectors) else {
-            context.unsafe.skipPastChildrenOfCurrentNode()
-            
-            return
-        }
-        
-        //  Select
-        
-        let selectionEvent = try context.unsafe.with(currentSelector: selector()) {
-            selector in
-            
-            try context.unsafe.borrowingEvent {
-                event in try process(&selector, event)
-            }
-        }
-        
-        //  If we're not supposed to execute the body, skip:
-        
-        guard let allowedExecution = selectionEvent.appropriateBodyExecution else {
-            context.unsafe.skipPastChildrenOfCurrentNode()
-            
-            return
-        }
-        
-        //  Push or pop slots for whatever state the user may use,
-        //  depending on the selection event
-        
-        let nodeIndex = context.unsafe.nodeIndex
-        
-        if case .matchedContainer(.atStart) = selectionEvent {
-            context.unsafe.pushEmptyUserStateSlot(to: nodeIndex)
-        }
-        
-        defer {
-            if case .matchedContainer(.atEnd) = selectionEvent {
-                context.unsafe.popUserStateSlot(from: nodeIndex, using: userStateDeinitializer)
-            }
-        }
-        
-        //  Execute selector body
-        
-        try context.unsafe.withExecutionLimited(to: allowedExecution) {
-            context.unsafe.incrementNodeIndex()
-            
-            try body(nodeIndex)
-        }
-    }
-    
     //  MARK: Children
     
     @usableFromInline
     func selectChild<T, U>(byUserCondition userCondition: () throws -> Bool, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<T, U> {
-        try select(
+        try context.unsafe.select(
             using: ChildContainerSelector(),
             process: {
                 selector, event in
@@ -123,7 +131,7 @@ extension Routine where Self: ~Copyable {
     
     @usableFromInline
     func selectChild<T, U>(by name: Name, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<T, U> {
-        try select(
+        try context.unsafe.select(
             using: ChildContainerSelector(),
             process: {
                 selector, event in
@@ -150,7 +158,7 @@ extension Routine where Self: ~Copyable {
     
     @usableFromInline
     func selectDescendant<Content: RoutineBody, UserState>(byUserCondition userCondition: () throws -> Bool, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
-        try select(
+        try context.unsafe.select(
             using: DescendantContainerSelector(),
             process: {
                 selector, event in
@@ -171,7 +179,7 @@ extension Routine where Self: ~Copyable {
     
     @usableFromInline
     func selectDescendant<Content: RoutineBody, UserState>(by name: Name, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
-        try select(
+        try context.unsafe.select(
             using: DescendantContainerSelector(),
             process: {
                 selector, event in
@@ -198,7 +206,7 @@ extension Routine where Self: ~Copyable {
     
     @usableFromInline
     func select<Content: RoutineBody, UserState>(using chainResult: @autoclosure () throws -> SelectorChainResult, deinitializingUserStateUsing userStateDeinitializer: Deinitializer = noopDeinitializer, body: (Int) throws -> Void) rethrows -> RoutineBodyNode<Content, UserState> {
-        try select(
+        try context.unsafe.select(
             using: ChainExecutingSelector(),
             process: {
                 selector, event in
