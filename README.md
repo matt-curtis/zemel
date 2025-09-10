@@ -32,8 +32,6 @@ Sound good? Great.
 
 # How do I use Zemel?
 
-## The basics
-
 Parsing in Zemel is built around _Routines_. Routines are where you define your selectors.
 
 Here's an example. Say you had the following XML of a list of people, and you want to extract the description for Beyoncé:
@@ -168,6 +166,54 @@ Zemel can't do this for every kind of statement though. There's a few exceptions
 
 You don't need to worry about any of these things when it comes to the bodies of text selectors, like `select(.text) { ... }`. Zemel doesn't rewrite their bodies at all. Since text nodes can't have children, there's nothing to select, so nesting selectors in them doesn't make sense.
 
+## Selecting elements with less code
+
+You can combine multiple selectors into one that would otherwise have to be nested. For example, instead of writing:
+
+```swift
+select("persons") {
+    select("person") {
+        //  ...
+    }
+}
+```
+
+you can write:
+
+```swift
+select(current.persons.person) {
+    //  ...
+}
+```
+
+which would let you select each person from this XML:
+
+```xml
+<persons>
+    <person>Joe Smith</person>
+    <person>Maggie Rath</person>
+    <person>Aly Tryst</person>
+</persons>
+```
+
+You can also write this selector more explicitly:
+
+```swift
+select(current.child("persons").child("person")) {
+    //  ...
+}
+```
+
+Just like with the `select()` methods, `current` has several methods on it (in addition to the dynamic member lookup demonstrated above) that mirror `select()` and enable selecting text and elements by name or condition:
+
+```swift
+current.child(Name)
+current.descendant(Name)
+current.child(@autoclosure () -> Bool)
+current.descendant(@autoclosure () -> Bool)
+current.text()
+```
+
 ## Storing information about a previously selected element
 
 All selectors (with the exception of those that select text), can store mutable state and provide it to other nested selectors in their bodies.
@@ -285,54 +331,6 @@ func select(.text, ...)
 ```
 
 Read [more about selecting text](#selecting-text).
-
-## Selector chains
-
-You can combine multiple selectors that would otherwise have to be nested into one single selector. For example, instead of writing:
-
-```swift
-select("persons") {
-    select("person") {
-        //  ...
-    }
-}
-```
-
-you can write:
-
-```swift
-select(current.persons.person) {
-    //  ...
-}
-```
-
-which would let you select each person from this XML:
-
-```xml
-<persons>
-    <person>Joe Smith</person>
-    <person>Maggie Rath</person>
-    <person>Aly Tryst</person>
-</persons>
-```
-
-You can also write this selector more explicitly:
-
-```swift
-select(current.child("persons").child("person")) {
-    //  ...
-}
-```
-
-Just like with the `select()` methods, `current` has several methods on it (in addition to the dynamic member lookup demonstrated above) that mirror `select()` and enable selecting text and elements by name or condition:
-
-```swift
-current.child(Name)
-current.descendant(Name)
-current.child(@autoclosure () -> Bool)
-current.descendant(@autoclosure () -> Bool)
-current.text()
-```
 
 ## Selector conditions
 
